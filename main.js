@@ -408,7 +408,7 @@ function initCopyEmail() {
 }
 
 /* ==========================================================================
-   11. Contact Form Submission
+   11. Contact Form Submission (Web3Forms Direct Email + Fallback)
    ========================================================================== */
 function initContactForm() {
   const form = document.getElementById('contact-form');
@@ -416,13 +416,15 @@ function initContactForm() {
 
   if (!form) return;
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const name = document.getElementById('form-name').value.trim();
     const email = document.getElementById('form-email').value.trim();
     const subject = document.getElementById('form-subject').value.trim();
     const message = document.getElementById('form-message').value.trim();
+    const accessKeyInput = document.getElementById('web3forms-access-key');
+    const accessKey = accessKeyInput ? accessKeyInput.value.trim() : '';
 
     if (!name || !email || !subject || !message) {
       showToast('Please fill out all fields.');
@@ -433,12 +435,53 @@ function initContactForm() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = `<span>Sending...</span>`;
 
-    setTimeout(() => {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
-      form.reset();
-      showToast('Thank you! Your message has been sent successfully.');
-    }, 900);
+    // Direct Mailto Fallback Builder
+    function sendViaMailto(noticeMsg) {
+      if (noticeMsg) showToast(noticeMsg);
+      const mailtoUrl = `mailto:gauravjoshigj321@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`Hi Gaurav,\n\nName: ${name}\nEmail: ${email}\n\nMessage:\n${message}`)}`;
+      window.location.href = mailtoUrl;
+    }
+
+    // If a valid Web3Forms access key is configured, post via API directly to your inbox
+    if (accessKey && accessKey !== 'YOUR_ACCESS_KEY_HERE') {
+      try {
+        const response = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            access_key: accessKey,
+            name: name,
+            email: email,
+            subject: `[Portfolio Inquiry] ${subject}`,
+            message: message,
+            from_name: `${name} (via Gaurav.dev)`
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          form.reset();
+          showToast('Thank you! Your message was sent directly to Gaurav.');
+        } else {
+          sendViaMailto('Opening email client to deliver your message...');
+        }
+      } catch (err) {
+        sendViaMailto('Network error. Opening email client...');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    } else {
+      // Direct email client fallback if key is not yet configured
+      setTimeout(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        sendViaMailto('Opening email client to send your message directly...');
+      }, 500);
+    }
   });
 }
 
