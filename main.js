@@ -222,15 +222,38 @@ function initNavObserver() {
 function initMobileMenu() {
   const hamburgerBtn = document.getElementById('hamburger-btn');
   const navLinks = document.getElementById('nav-links');
+  if (!hamburgerBtn || !navLinks) return;
 
-  hamburgerBtn.addEventListener('click', () => {
-    navLinks.classList.toggle('open');
+  function toggleMenu(isOpen) {
+    const shouldOpen = typeof isOpen === 'boolean' ? isOpen : !navLinks.classList.contains('open');
+    navLinks.classList.toggle('open', shouldOpen);
+    hamburgerBtn.classList.toggle('active', shouldOpen);
+    hamburgerBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  }
+
+  hamburgerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu();
   });
 
   navLinks.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', () => {
-      navLinks.classList.remove('open');
+      toggleMenu(false);
     });
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', (e) => {
+    if (navLinks.classList.contains('open') && !navLinks.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+      toggleMenu(false);
+    }
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && navLinks.classList.contains('open')) {
+      toggleMenu(false);
+    }
   });
 }
 
